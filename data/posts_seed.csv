@@ -1,0 +1,11 @@
+post_id,chat_id,created_at,updated_at,status,source,photo_file_id,product,price,angle,festival,has_price_on_poster,headline,image_url,fb_post_id,reactions,comments,shares,feedback,listener_json,strategy_json,copy_json,posted_at
+seed01,REPLACE_WITH_OWNER_CHAT_ID,2026-09-20,2026-09-20,posted,seeded_demo,,Rosogolla,10/pc,new_arrival,,no,টাটকা রসগোল্লা,,,14,1,0,,,,,2026-09-20
+seed02,REPLACE_WITH_OWNER_CHAT_ID,2026-09-27,2026-09-27,posted,seeded_demo,,Sandesh,15/pc,new_arrival,,yes,নতুন সন্দেশ,,,22,3,1,,,,,2026-09-27
+seed03,REPLACE_WITH_OWNER_CHAT_ID,2026-10-04,2026-10-04,posted,seeded_demo,,Mihidana,320/kg,offer,,yes,মিহিদানা অফার,,,25,2,2,,,,,2026-10-04
+seed04,REPLACE_WITH_OWNER_CHAT_ID,2026-10-15,2026-10-15,posted,seeded_demo,,Durga Puja gift box,350/box,festival,Durga Puja,yes,পুজোর মিষ্টি বাক্স,,,71,12,9,,,,,2026-10-15
+seed05,REPLACE_WITH_OWNER_CHAT_ID,2026-10-18,2026-10-18,posted,seeded_demo,,Kalakand,400/kg,festival,Durga Puja,no,পুজোয় কালাকাঁদ,,,38,4,3,,,,,2026-10-18
+seed06,REPLACE_WITH_OWNER_CHAT_ID,2026-10-08,2026-10-08,posted,seeded_demo,,Langcha,12/pc,new_arrival,,no,শক্তিগড়ের ল্যাংচা,,,17,1,0,,,,,2026-10-08
+seed07,REPLACE_WITH_OWNER_CHAT_ID,2026-10-21,2026-10-21,posted,seeded_demo,,Bijoya sweets platter,299/platter,festival,Bijoya Dashami,yes,বিজয়ার মিষ্টিমুখ,,,64,15,11,,,,,2026-10-21
+seed08,REPLACE_WITH_OWNER_CHAT_ID,2026-10-24,2026-10-24,posted,seeded_demo,,Lakshmi Puja naru,200/kg,festival,Lakshmi Puja,yes,লক্ষ্মীপুজোর নাড়ু,,,52,7,6,,,,,2026-10-24
+seed09,REPLACE_WITH_OWNER_CHAT_ID,2026-10-28,2026-10-28,posted,seeded_demo,,Rajbhog,15/pc,restock,,no,রাজভোগ আবার এসেছে,,,12,0,0,,,,,2026-10-28
+seed10,REPLACE_WITH_OWNER_CHAT_ID,2026-11-01,2026-11-01,posted,seeded_demo,,Nolen gur sandesh (early),20/pc,new_arrival,,yes,নলেন গুড়ের সন্দেশ,,,41,9,4,,,,,2026-11-01

@@ -1,0 +1,2 @@
+chat_id,shop_name_en,shop_name_bn,shop_type,area,phone,upi_id,brand_color,accent_color,tone,languages,channel_id,fb_page_id,style_notes,insights
+REPLACE_WITH_OWNER_CHAT_ID,Maa Annapurna Mishtanna Bhandar,মা অন্নপূর্ণা মিষ্টান্ন ভাণ্ডার,sweet shop,"Adisaptagram, Hooghly",REPLACE_WITH_SHOP_PHONE,,#8B1E3F,#F2A93B,"warm, homely, festive; speaks like a neighbourhood shopkeeper",bn+en,REPLACE_WITH_CHANNEL_ID,REPLACE_WITH_FB_PAGE_ID,"Bengali first, short English line after. Max 2 emojis.",
