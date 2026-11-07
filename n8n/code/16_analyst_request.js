@@ -5,12 +5,16 @@
 // Then "Parse Analyst JSON" (06_parse_llm_json.js with REQUIRED = ['report_text','insights']).
 
 const MAX_TOKENS = 1200;
-const SYSTEM = "You are the Analyst for a small shop's marketing assistant. You get pre-computed statistics about the shop's recent posts and the list of upcoming festivals.\n\nWrite a short weekly report for the shop owner:\n- Bengali first, simple words, then a 1–2 line English summary.\n- 3 findings max, each tied to a number from the stats (quote the number exactly as given; never compute new numbers).\n- 1 concrete next action, tied to a real upcoming festival from the list (with its date) and a product type that fits this shop.\n- If the stats include seeded demo data, do not hide it — the stats JSON says so; add \"(demo data)\" after any finding based on it.\n- Telegram message limit: under 900 characters total.\n\nAlso produce an \"insights\" line to save into memory for the Strategist (max 250 characters, English, e.g. \"Festival posts with price on poster get ~3x reactions; plain restock posts do poorly\").\n\nReturn ONLY valid JSON:\n{\n  \"report_text\": \"the Telegram message for the owner\",\n  \"insights\": \"max 250 chars, for memory\",\n  \"next_festival\": \"name and date, or null\"\n}";
+const SYSTEM = "You are the Analyst for a small business's marketing assistant (Dukaan Digital). You get pre-computed statistics about the business's recent posts and the list of upcoming festivals.\n\nWrite a short weekly report for the owner:\n- {{LANG_RULE}}\n- 3 findings max, each tied to a number from the stats (quote the number exactly as given; never compute new numbers).\n- 1 concrete next action, tied to a real upcoming festival from the list (with its date) and a product or service that fits this business type.\n- If the stats include seeded demo data, do not hide it; add \"(demo data)\" after any finding based on it.\n- Telegram message limit: under 900 characters total.\n\nAlso produce an \"insights\" line to save into memory for the Strategist (max 250 characters, English, e.g. \"Festival posts with price on poster get ~3x reactions; plain restock posts do poorly\").\n\nReturn ONLY valid JSON:\n{\n  \"report_text\": \"the Telegram message for the owner\",\n  \"insights\": \"max 250 chars, for memory\",\n  \"next_festival\": \"name and date, or null\"\n}";
 const parse = s => { try { return JSON.parse(s || '{}'); } catch (e) { return {}; } };
 const clean = v => (v && !/REPLACE/.test(String(v)) ? v : null);
+const normLang = v => (v === 'bn' || v === 'en') ? v : 'mixed';
+function langRule() { return ''; }
 const transcript = (() => { try { return $('Transcribe voice').first().json.text || ''; } catch (e) { return ''; } })();
 
 const AGENT = 'analyst';
+const LANG = { bn: 'Write it in simple Bengali only.', en: 'Write it in simple English only.', mixed: 'Bengali first, simple words, then a 1-2 line English summary.' };
+function langRule() { const forChat = String($('Start').first().json.for_chat || ''); const s = $('Get shops').all().map(i => i.json).find(x => String(x.chat_id) === forChat) || {}; return LANG[normLang(s.languages)]; }
 // In the "DD Insights" workflow, after "Analyst stats" (11_analyst_stats.js).
 // Shop row: the first 'Get shops' row whose chat_id matches Start.for_chat.
 function userContent() {
@@ -26,6 +30,6 @@ function userContent() {
 }
 
 const user = userContent().filter(b => b.type === 'text').map(b => b.text).join('\n');
-const out = { json: { agent: AGENT, system: SYSTEM, user, max_tokens: MAX_TOKENS } };
+const out = { json: { agent: AGENT, system: SYSTEM.replace('{{LANG_RULE}}', langRule()), user, max_tokens: MAX_TOKENS } };
 if (AGENT === 'listener') { try { const b = $('Get photo file').first().binary; if (b && b.data) out.binary = { data: b.data }; } catch (e) {} }
 return [out];

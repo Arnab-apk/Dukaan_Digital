@@ -1,0 +1,2 @@
+// Live code from n8n workflow 'DD Insights (Analyst + festival nudge)', node 'Start'.
+return [{ json: { for_chat: String($input.first().json.chat_id || ''), mode: $input.first().json.mode || 'nudge' } }];

@@ -64,6 +64,12 @@ and under Additional Fields turn **Append n8n Attribution OFF**. Otherwise every
   - `/report` → Execute Workflow "DD Insights" with fields `chat_id` = `{{ $('Decide next step').first().json.chat_id }}` and `mode` = `report`
   - `/nudge` → the same, with `mode` = `nudge`
   - `/memory` → Send Message `Style notes: {{ ($('Decide next step').first().json.shop || {}).style_notes || '(none yet)' }}`
+  - `/setup` → Code **Parse setup** (`18_parse_setup.js`) → IF `{{ $json.ok }}`:
+    true → Data table **Upsert** on dd_shops matching `chat_id` = `{{ $json.shop.chat_id }}`, every column = `{{ $json.shop.<column> }}`
+    (Always Output Data ON) → Send Message `{{ $('Parse setup').first().json.msg }}` with three inline buttons:
+    `বাংলা` = callback `lang:bn`, `English` = `lang:en`, `বাংলা + English` = `lang:mixed`. false → Send Message with the `/setup` usage.
+    In **Decide next step**, `/setup` routes to `command` even when the chat has no shop yet.
+  - `/language` → Send Message "Which language should your posts use?" with the same three buttons.
 - **start_collecting**: Data table → Insert row into dd_posts:
   - post_id = `{{ $('Decide next step').first().json.post_id }}`
   - chat_id = `{{ $('Decide next step').first().json.chat_id }}`
@@ -146,6 +152,13 @@ Both `create_post` and `edit_post` outputs go to:
    - **edit** → Data table Update row(s) on dd_posts where `post_id` equals `{{ $('Decide next step').first().json.post_id }}`: status `awaiting_edit`,
      updated_at = `{{ $('Decide next step').first().json.now }}` → Send Message `কী বদলাবো? ভয়েস নোট বা লিখে জানান। (What should I change?)`
    - **skip** → Data table Update row(s), same match: status `skipped`, updated_at = now → Send Message `ঠিক আছে, বাদ দিলাম। (Skipped)`
+   - **lang** → Data table Update row(s) on dd_shops where `chat_id` = this chat: `languages` = `{{ $('Decide next step').first().json.post_id }}`
+     (Route update puts the part after `lang:` into post_id; Always Output Data ON) → Send Message confirming the language.
+
+**Design themes.** The Strategist returns `design_theme` (festive, modern, bold, fresh, elegant). On an edit, the Memory keeper can return a
+`design_theme` and a `language`; **Build poster** uses the Memory theme first, and **Build preview** saves the theme used into strategy_json
+so the next edit keeps it. **Save style notes** also writes `languages` when the owner asks for a lasting language change.
+**Transcribe voice** language = `{{ (($('Decide next step').first().json.shop || {}).languages === 'en') ? 'en' : 'bn' }}`.
 
 ---
 

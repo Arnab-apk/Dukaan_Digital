@@ -1,48 +1,110 @@
-<!-- Dukaan Digital poster template, 1080 x 1080.
-     Source of truth for the design. n8n/code/08_build_poster.js contains the same markup in its TEMPLATE constant;
-     if you change this file, copy it into that constant (Claude Code can do this: "sync the poster template").
-     Placeholders: {{BRAND}} {{ACCENT}} {{SHOP_BN}} {{SHOP_EN}} {{PHOTO}} {{BADGE}} {{BADGE_DISPLAY}}
-                   {{HEADLINE}} {{SUBLINE}} {{PRICE}} {{PRICE_DISPLAY}} {{FOOTER}} -->
-<div class="poster">
-  <div class="dots"></div>
+<!-- Dukaan Digital poster template, 1080 x 1080, five themes chosen per post by the Strategist:
+     festive (sweets, puja, gift boxes) · modern (everyday retail, electronics) · bold (fitness, sports, gadgets, sales)
+     fresh (bakery, café, grocery, home food) · elegant (sarees, jewellery, boutiques, salons, premium gifts)
+     Source of truth for the design. n8n/code/08_build_poster.js embeds it in TEMPLATE (regenerate with tools/gen_poster_js.py).
+     Placeholders: {{THEME}} {{BRAND}} {{ACCENT}} {{SHOP_BN}} {{SHOP_EN}} {{PHOTO}} {{BADGE}} {{BADGE_DISPLAY}}
+                   {{HEADLINE}} {{SUBLINE}} {{PRICE}} {{PRICE_DISPLAY}} {{FOOTER_LEFT}} {{FOOTER_RIGHT}} -->
+<div class="poster theme-{{THEME}}">
+  <div class="bg"></div>
   <header>
     <div class="shop-bn">{{SHOP_BN}}</div>
     <div class="shop-en">{{SHOP_EN}}</div>
   </header>
   <div class="photo-wrap">
-    <img class="photo" src="{{PHOTO}}" alt="">
+    <div class="photo-frame"><img class="photo" src="{{PHOTO}}" alt=""></div>
     <div class="badge" style="display:{{BADGE_DISPLAY}}">{{BADGE}}</div>
     <div class="price" style="display:{{PRICE_DISPLAY}}"><span>{{PRICE}}</span></div>
   </div>
-  <div class="headline">{{HEADLINE}}</div>
-  <div class="subline">{{SUBLINE}}</div>
-  <footer>{{FOOTER}}</footer>
+  <div class="text">
+    <div class="headline">{{HEADLINE}}</div>
+    <div class="subline">{{SUBLINE}}</div>
+  </div>
+  <footer><span>{{FOOTER_LEFT}}</span><span>{{FOOTER_RIGHT}}</span></footer>
 </div>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { width: 1080px; height: 1080px; }
-  .poster { position: relative; width: 1080px; height: 1080px; overflow: hidden;
-    background: {{BRAND}}; color: #fff; font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'Poppins', sans-serif;
-    display: flex; flex-direction: column; align-items: center; }
-  .dots { position: absolute; inset: 0; opacity: .10;
-    background-image: radial-gradient({{ACCENT}} 2px, transparent 2.5px); background-size: 34px 34px; }
-  header { position: relative; text-align: center; padding-top: 44px; }
-  .shop-bn { font-size: 58px; font-weight: 700; color: {{ACCENT}}; line-height: 1.15; }
-  .shop-en { font-family: 'Poppins', sans-serif; font-size: 22px; letter-spacing: 4px; text-transform: uppercase; opacity: .85; margin-top: 4px; }
-  .photo-wrap { position: relative; margin-top: 30px; width: 900px; height: 560px; }
-  .photo { width: 100%; height: 100%; object-fit: cover; border-radius: 28px; border: 8px solid {{ACCENT}};
-    box-shadow: 0 18px 40px rgba(0,0,0,.35); background: #3a1020; }
-  .badge { position: absolute; top: 28px; left: -18px; background: {{ACCENT}}; color: {{BRAND}};
-    font-size: 36px; font-weight: 700; padding: 10px 30px 12px 34px; border-radius: 0 40px 40px 0;
-    box-shadow: 0 6px 16px rgba(0,0,0,.3); }
-  .price { position: absolute; right: -26px; bottom: -40px; width: 230px; height: 230px; border-radius: 50%;
-    background: {{ACCENT}}; color: {{BRAND}}; display: flex; align-items: center; justify-content: center;
-    text-align: center; font-weight: 700; font-size: 46px; line-height: 1.05; padding: 22px;
-    border: 8px solid {{BRAND}}; box-shadow: 0 10px 24px rgba(0,0,0,.35); }
-  .price span { display: block; }
-  .price small { display: block; font-size: 32px; font-weight: 600; margin-top: 4px; }
-  .headline { position: relative; margin-top: 38px; font-size: 76px; font-weight: 700; text-align: center; line-height: 1.1; padding: 0 60px; }
-  .subline { position: relative; margin-top: 10px; font-size: 36px; text-align: center; opacity: .92; padding: 0 80px; }
-  footer { position: absolute; bottom: 0; left: 0; right: 0; height: 74px; background: rgba(0,0,0,.28);
-    display: flex; align-items: center; justify-content: center; font-size: 28px; letter-spacing: .5px; }
+  .poster { position: relative; width: 1080px; height: 1080px; overflow: hidden; font-family: 'Hind Siliguri', 'Poppins', sans-serif; }
+  .bg { position: absolute; inset: 0; pointer-events: none; }
+  .photo-frame { width: 100%; height: 100%; overflow: hidden; }
+  .photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .price small { display: block; font-size: .62em; font-weight: 600; margin-top: 2px; }
+  .shop-en:empty, .subline:empty { display: none; }
+  footer span:empty { display: none; }
+
+  /* ---------- FESTIVE: sweets, puja items, gift boxes ---------- */
+  .theme-festive { background: {{BRAND}}; color: #fff; display: flex; flex-direction: column; align-items: center; }
+  .theme-festive .bg { opacity: .10; background-image: radial-gradient({{ACCENT}} 2px, transparent 2.5px); background-size: 34px 34px; }
+  .theme-festive header { position: relative; text-align: center; padding-top: 44px; }
+  .theme-festive .shop-bn { font-size: 56px; font-weight: 700; color: {{ACCENT}}; line-height: 1.15; }
+  .theme-festive .shop-en { font-family: 'Poppins', sans-serif; font-size: 22px; letter-spacing: 4px; text-transform: uppercase; opacity: .85; margin-top: 4px; }
+  .theme-festive .photo-wrap { position: relative; margin-top: 28px; width: 900px; height: 540px; }
+  .theme-festive .photo-frame { border-radius: 28px; border: 8px solid {{ACCENT}}; box-shadow: 0 18px 40px rgba(0,0,0,.35); }
+  .theme-festive .badge { position: absolute; top: 28px; left: -18px; background: {{ACCENT}}; color: {{BRAND}}; font-size: 34px; font-weight: 700; padding: 10px 30px 12px 34px; border-radius: 0 40px 40px 0; box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+  .theme-festive .price { position: absolute; right: -26px; bottom: -40px; width: 220px; height: 220px; border-radius: 50%; background: {{ACCENT}}; color: {{BRAND}}; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 700; font-size: 46px; line-height: 1.05; padding: 22px; border: 8px solid {{BRAND}}; }
+  .theme-festive .text { position: relative; text-align: center; padding: 0 70px; margin-top: 40px; }
+  .theme-festive .headline { font-size: 74px; font-weight: 700; line-height: 1.1; }
+  .theme-festive .subline { font-size: 34px; opacity: .92; margin-top: 8px; }
+  .theme-festive footer { position: absolute; bottom: 0; left: 0; right: 0; height: 72px; background: rgba(0,0,0,.28); display: flex; align-items: center; justify-content: center; gap: 40px; font-size: 26px; }
+
+  /* ---------- MODERN: everyday retail, electronics, stationery ---------- */
+  .theme-modern { background: #F5F4F0; color: #141414; padding: 56px 64px 0 78px; }
+  .theme-modern .bg { right: auto; width: 16px; background: {{ACCENT}}; }
+  .theme-modern header { display: flex; align-items: baseline; gap: 18px; }
+  .theme-modern .shop-bn { font-size: 32px; font-weight: 700; }
+  .theme-modern .shop-en { font-family: 'Poppins', sans-serif; font-size: 18px; letter-spacing: 3px; text-transform: uppercase; color: #77756f; }
+  .theme-modern .photo-wrap { position: relative; margin-top: 26px; height: 600px; }
+  .theme-modern .photo-frame { border-radius: 28px; box-shadow: 0 24px 60px rgba(0,0,0,.16); background: #fff; }
+  .theme-modern .badge { position: absolute; top: 24px; left: 24px; background: #fff; color: #141414; font-size: 26px; font-weight: 700; padding: 10px 22px; border-radius: 999px; box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+  .theme-modern .price { position: absolute; right: 24px; bottom: 24px; background: #141414; color: #fff; font-size: 54px; font-weight: 700; padding: 14px 32px 16px; border-radius: 20px; line-height: 1; text-align: right; white-space: nowrap; }
+  .theme-modern .text { margin-top: 44px; }
+  .theme-modern .headline { font-size: 70px; font-weight: 700; line-height: 1.08; letter-spacing: -.5px; }
+  .theme-modern .subline { font-size: 34px; color: #5c5a55; margin-top: 10px; }
+  .theme-modern footer { position: absolute; left: 78px; right: 64px; bottom: 0; height: 80px; border-top: 2px solid #e1dfd8; display: flex; align-items: center; justify-content: space-between; font-size: 24px; color: #5c5a55; }
+
+  /* ---------- BOLD: fitness, sports, gadgets, sales ---------- */
+  .theme-bold { background: #0E1014; color: #fff; }
+  .theme-bold .photo-wrap { position: absolute; top: 0; left: 0; width: 1080px; height: 690px; }
+  .theme-bold .photo-frame::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(14,16,20,.55) 0%, rgba(14,16,20,0) 30%, rgba(14,16,20,0) 55%, #0E1014 100%); }
+  .theme-bold .photo-frame { position: relative; }
+  .theme-bold header { position: absolute; top: 44px; left: 60px; z-index: 2; }
+  .theme-bold .shop-bn { font-size: 32px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
+  .theme-bold .shop-en { font-family: 'Poppins', sans-serif; font-size: 16px; letter-spacing: 4px; text-transform: uppercase; opacity: .8; }
+  .theme-bold .badge { position: absolute; top: 44px; right: 60px; background: #D7FF3B; color: #0E1014; font-size: 26px; font-weight: 800; padding: 10px 24px; border-radius: 6px; transform: skewX(-8deg); z-index: 2; }
+  .theme-bold .price { position: absolute; right: 60px; bottom: -34px; background: #D7FF3B; color: #0E1014; font-size: 62px; font-weight: 800; padding: 14px 34px 16px; border-radius: 10px; transform: skewX(-8deg); line-height: 1; z-index: 3; text-align: right; white-space: nowrap; }
+  .theme-bold .text { position: absolute; left: 60px; right: 60px; top: 740px; }
+  .theme-bold .headline { font-family: 'Oswald', 'Hind Siliguri', sans-serif; font-size: 84px; font-weight: 700; line-height: 1.02; text-transform: uppercase; }
+  .theme-bold .subline { font-size: 38px; color: #C3C8D1; margin-top: 12px; }
+  .theme-bold footer { position: absolute; left: 60px; right: 60px; bottom: 0; height: 84px; border-top: 1px solid #262a33; display: flex; align-items: center; justify-content: space-between; font-size: 24px; color: #8f96a3; }
+
+  /* ---------- FRESH: bakery, café, grocery, home food ---------- */
+  .theme-fresh { background: #FFF6E9; color: #2E4A3B; display: flex; flex-direction: column; align-items: center; }
+  .theme-fresh .bg { background: radial-gradient(circle at 92% 6%, #F8D7A6 0 190px, transparent 191px), radial-gradient(circle at 4% 96%, #DCEBD1 0 230px, transparent 231px); }
+  .theme-fresh header { position: relative; text-align: center; padding-top: 46px; }
+  .theme-fresh .shop-bn { font-size: 50px; font-weight: 700; }
+  .theme-fresh .shop-en { font-family: 'Poppins', sans-serif; font-size: 18px; letter-spacing: 5px; text-transform: uppercase; color: #7B907F; margin-top: 2px; }
+  .theme-fresh .photo-wrap { position: relative; margin-top: 26px; width: 860px; height: 530px; }
+  .theme-fresh .photo-frame { border-radius: 42px; border: 12px solid #fff; box-shadow: 0 18px 44px rgba(90,60,20,.16); }
+  .theme-fresh .badge { position: absolute; top: 26px; left: 26px; background: #E6F2DD; color: #2E4A3B; font-size: 28px; font-weight: 700; padding: 10px 26px; border-radius: 999px; }
+  .theme-fresh .price { position: absolute; right: -30px; bottom: -42px; width: 210px; height: 210px; border-radius: 50%; background: #3E7B52; color: #fff; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 46px; font-weight: 700; line-height: 1.05; border: 8px solid #FFF6E9; padding: 20px; }
+  .theme-fresh .text { position: relative; text-align: center; padding: 0 80px; margin-top: 44px; }
+  .theme-fresh .headline { font-size: 70px; font-weight: 700; line-height: 1.1; }
+  .theme-fresh .subline { font-size: 32px; color: #6B7F70; margin-top: 8px; }
+  .theme-fresh footer { position: absolute; bottom: 0; left: 0; right: 0; height: 72px; background: #3E7B52; color: #fff; display: flex; align-items: center; justify-content: center; gap: 40px; font-size: 26px; }
+
+  /* ---------- ELEGANT: sarees, jewellery, boutiques, salons ---------- */
+  .theme-elegant { background: #FBF7EF; color: #1F3D36; display: flex; flex-direction: column; align-items: center; }
+  .theme-elegant .bg { inset: 26px; border: 2px solid #C9A45C; }
+  .theme-elegant .bg::after { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(201,164,92,.55); }
+  .theme-elegant header { position: relative; text-align: center; padding-top: 64px; }
+  .theme-elegant .shop-bn { font-family: 'Playfair Display', 'Hind Siliguri', serif; font-size: 46px; font-weight: 600; }
+  .theme-elegant .shop-en { font-family: 'Poppins', sans-serif; font-size: 16px; letter-spacing: 7px; text-transform: uppercase; color: #9C7C3A; margin-top: 4px; }
+  .theme-elegant .photo-wrap { position: relative; margin-top: 34px; width: 860px; height: 560px; }
+  .theme-elegant .photo-frame { padding: 10px; background: #fff; border: 1px solid #C9A45C; box-shadow: 0 14px 34px rgba(31,61,54,.14); }
+  .theme-elegant .badge { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: #1F3D36; color: #F3E4C0; font-size: 24px; letter-spacing: 2px; padding: 8px 28px; white-space: nowrap; }
+  .theme-elegant .price { position: absolute; right: -28px; bottom: -30px; background: #1F3D36; color: #F3E4C0; font-family: 'Playfair Display', 'Hind Siliguri', serif; font-size: 44px; padding: 14px 30px 16px; border: 2px solid #C9A45C; line-height: 1; text-align: right; white-space: nowrap; }
+  .theme-elegant .text { position: relative; text-align: center; padding: 0 110px; margin-top: 46px; }
+  .theme-elegant .headline { font-family: 'Playfair Display', 'Hind Siliguri', serif; font-size: 64px; font-weight: 600; line-height: 1.12; }
+  .theme-elegant .subline { font-size: 32px; color: #6E6A5E; margin-top: 10px; }
+  .theme-elegant footer { position: absolute; bottom: 48px; left: 0; right: 0; display: flex; justify-content: center; gap: 36px; font-size: 22px; letter-spacing: 1px; color: #9C7C3A; }
 </style>

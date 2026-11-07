@@ -32,5 +32,7 @@ A team of AI agents in n8n that markets a small shop from one photo and a Bengal
 - **Real product photos only.** Never AI-generated food.
 - **Numbers are computed in code.** The Analyst only interprets them, so it can't invent statistics.
 - **Festival dates come from a verified list.** The model never guesses them. Poush Sankranti 2027 is marked approximate.
-- **Memory:** edits like "less English" become lasting style notes that the next post follows.
+- **Memory:** edits like "less English" or "always make it look premium" become lasting style notes (including `Preferred design` and `Language`) that the next post follows.
+- **Product-appropriate design.** The Strategist picks one of five poster themes for each post (festive, modern, bold, fresh, elegant) to suit the product, and explains why. The owner can ask for another look in plain words ("more premium", "simple and clean") with ✏️ Change. Preview of all five: `docs/poster_themes.png`.
+- **Any business, any language.** `/setup Name | type | area | phone` registers a new business in one line; `/language` switches posts between Bengali, English, or both. The nudge and weekly report follow the same setting.
 - **Seeded engagement history is labelled as demo data.** Live posts are real.

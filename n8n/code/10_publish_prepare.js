@@ -31,7 +31,9 @@ let wa = cut(copy.whatsapp_text || plain, 280);
 if (post.image_url) wa += `\n${post.image_url}`; // the poster link previews in WhatsApp
 const whatsapp_url = 'https://wa.me/?text=' + encodeURIComponent(wa);
 
-const fb_page_id = String(shop.fb_page_id || '');
+// Shops without their own Page post to the team Page whose token is in the n8n Facebook credential.
+const DEFAULT_FB_PAGE_ID = '1471948929329313';
+const fb_page_id = String(shop.fb_page_id || DEFAULT_FB_PAGE_ID);
 return [{
   json: {
     post_id: post.post_id,

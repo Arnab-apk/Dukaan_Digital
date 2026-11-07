@@ -16,18 +16,20 @@ const MAX_TOKENS = {max_tokens};
 const SYSTEM = {system};
 const parse = s => {{ try {{ return JSON.parse(s || '{{}}'); }} catch (e) {{ return {{}}; }} }};
 const clean = v => (v && !/REPLACE/.test(String(v)) ? v : null);
+const normLang = v => (v === 'bn' || v === 'en') ? v : 'mixed';
+function langRule() {{ return ''; }}
 const transcript = (() => {{ try {{ return $('Transcribe voice').first().json.text || ''; }} catch (e) {{ return ''; }} }})();
 '''
 
 FOOTER_ALL = '''
 const user = userContent().filter(b => b.type === 'text').map(b => b.text).join('\\n');
-const out = { json: { agent: AGENT, system: SYSTEM, user, max_tokens: MAX_TOKENS } };
+const out = { json: { agent: AGENT, system: SYSTEM.replace('{{LANG_RULE}}', langRule()), user, max_tokens: MAX_TOKENS } };
 if (AGENT === 'listener') { try { const b = $('Get photo file').first().binary; if (b && b.data) out.binary = { data: b.data }; } catch (e) {} }
 return [out];
 '''
 FOOTER_EACH = '''
 const user = userContent().filter(b => b.type === 'text').map(b => b.text).join('\\n');
-return { json: { agent: AGENT, chat_id: $json.chat_id, system: SYSTEM, user, max_tokens: MAX_TOKENS } };
+return { json: { agent: AGENT, chat_id: $json.chat_id, system: SYSTEM.replace('{{LANG_RULE}}', langRule()), user, max_tokens: MAX_TOKENS } };
 '''
 
 specs = [
@@ -38,6 +40,7 @@ function userContent() {
   const d = $('Decide next step').first().json;
   const content = [];   // the product photo is attached by the Anthropic node from this item's binary
   content.push({ type: 'text', text: [
+    `Business type: ${(d.shop || {}).shop_type || 'unknown'}`,
     `Owner's typed text: ${d.text || '(none)'}`,
     `Owner's voice note (transcribed): ${transcript || '(none)'}`,
     'Return the JSON now.',
@@ -55,13 +58,15 @@ function userContent() {
   const shop = d.shop || {};
   const saved = (() => { try { return $('Get post').first().json || {}; } catch (e) { return {}; } })();
   let style = shop.style_notes || '';
+  let lang = normLang(shop.languages);
   let change = null;
   if (isEdit) {
-    try { const m = $('Parse Memory JSON').first().json; if (m.ok) { style = m.new_style_notes || style; change = m.change_request; } } catch (e) {}
+    try { const m = $('Parse Memory JSON').first().json; if (m.ok) { style = m.new_style_notes || style; change = m.change_request; if (['bn', 'en', 'mixed'].includes(m.language)) lang = m.language; } } catch (e) {}
     change = change || transcript || d.text;
   }
   const facts = {
     today: new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10),
+    language: lang,
     shop: { name_bn: shop.shop_name_bn, name_en: shop.shop_name_en, type: shop.shop_type, area: shop.area, phone: clean(shop.phone), tone: shop.tone },
     style_notes: style,
     owner_said: isEdit ? parse(saved.listener_json) : $('Parse Listener JSON').first().json,
@@ -75,16 +80,19 @@ function userContent() {
       required="['is_lasting','new_style_notes']", model='claude-sonnet-5-5', max_tokens=600, each=False, body='''
 const AGENT = 'memory';
 // EDIT path only. After "Parse Memory JSON": IF {{ $json.is_lasting }} -> Data table "Update row" on dd_shops
-// (match chat_id, set style_notes = {{ $json.new_style_notes }}) -> continue to "Build Copywriter request".
+// (match chat_id, set style_notes = {{ $json.new_style_notes }}, languages = {{ $json.language || shop.languages }}) -> continue to "Build Copywriter request".
 function userContent() {
   const d = $('Decide next step').first().json;
-  const facts = { current_style_notes: (d.shop || {}).style_notes || '', owner_change_request: transcript || d.text || '' };
+  const shop = d.shop || {};
+  const facts = { current_style_notes: shop.style_notes || '', current_language: normLang(shop.languages), business_type: shop.shop_type || '', owner_change_request: transcript || d.text || '' };
   return [{ type: 'text', text: JSON.stringify(facts, null, 2) + '\\nReturn the JSON now.' }];
 }
 '''),
  dict(file='16_analyst_request.js', title='Analyst', pfile='05_analyst.md', mode='Run Once for All Items',
       required="['report_text','insights']", model='claude-sonnet-5-5', max_tokens=1200, each=False, body='''
 const AGENT = 'analyst';
+const LANG = { bn: 'Write it in simple Bengali only.', en: 'Write it in simple English only.', mixed: 'Bengali first, simple words, then a 1-2 line English summary.' };
+function langRule() { const forChat = String($('Start').first().json.for_chat || ''); const s = $('Get shops').all().map(i => i.json).find(x => String(x.chat_id) === forChat) || {}; return LANG[normLang(s.languages)]; }
 // In the "DD Insights" workflow, after "Analyst stats" (11_analyst_stats.js).
 // Shop row: the first 'Get shops' row whose chat_id matches Start.for_chat.
 function userContent() {
@@ -102,11 +110,13 @@ function userContent() {
  dict(file='17_nudge_request.js', title='Nudge', pfile='06_nudge.md', mode='Run Once for Each Item',
       required="['message']", model='claude-sonnet-5-5', max_tokens=500, each=True, body='''
 const AGENT = 'nudge';
+const LANG = { bn: 'Write in natural West Bengal Bengali only.', en: 'Write in simple, friendly Indian English only.', mixed: 'Write in Bengali, with one short English line at the end.' };
+function langRule() { return LANG[normLang($json.shop.languages)]; }
 // One item per shop from "Nudge check". In the Telegram "Send Message" node after "Parse Nudge JSON", use
 //   Chat ID = {{ $('Nudge check').item.json.chat_id }}   Text = {{ $json.message }}
 function userContent() {
   const facts = {
-    shop: { name_bn: $json.shop.shop_name_bn, type: $json.shop.shop_type },
+    shop: { name_bn: $json.shop.shop_name_bn, name_en: $json.shop.shop_name_en, type: $json.shop.shop_type },
     festival: $json.festival,
     recent_products: $json.recent_products,
   };
@@ -139,6 +149,7 @@ s = '''// n8n Code node: "Build Strategist input"   (Mode: Run Once for All Item
 const d = $('Decide next step').first().json;
 const shop = d.shop || {};
 const listener = $('Parse Listener JSON').first().json;
+const normLang = v => (v === 'bn' || v === 'en') ? v : 'mixed';
 const today = new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
 
 let PAST_RESULTS = 'Use the past_post_results tool.';
@@ -152,6 +163,7 @@ try {
 const prompt = [
   `Today is ${today} (India).`,
   `Shop profile: ${JSON.stringify({ name_bn: shop.shop_name_bn, name_en: shop.shop_name_en, type: shop.shop_type, area: shop.area, tone: shop.tone })}`,
+  `Language setting for posts: ${normLang(shop.languages)}`,
   `Style notes from the owner's past edits: ${shop.style_notes || '(none yet)'}`,
   `Insights from the Analyst: ${shop.insights || '(none yet)'}`,
   `Past post results: ${PAST_RESULTS}`,

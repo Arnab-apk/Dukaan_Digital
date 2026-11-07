@@ -1,0 +1,354 @@
+{
+  "name": "DD Lead Finder",
+  "nodes": [
+    {
+      "id": "7775641d-bfe3-4e66-a83c-0f28c083db65",
+      "name": "Called by DD Main",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chat_id",
+              "type": "string"
+            },
+            {
+              "name": "query",
+              "type": "string"
+            },
+            {
+              "name": "mode",
+              "type": "string"
+            },
+            {
+              "name": "shop_name",
+              "type": "string"
+            },
+            {
+              "name": "shop_type",
+              "type": "string"
+            },
+            {
+              "name": "area",
+              "type": "string"
+            },
+            {
+              "name": "lang",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2e13d333-83e3-4869-9fee-b7b92949fabf",
+      "name": "Clean leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst textOf = x => {\n  if (!x) return '';\n  if (typeof x.merged_response === 'string') return x.merged_response;\n  if (typeof x.output === 'string') return x.output;\n  if (Array.isArray(x.output)) return x.output.map(c => c.text || '').join('');\n  if (x.content && Array.isArray(x.content.parts)) return x.content.parts.map(p => p.text || '').join('');\n  if (Array.isArray(x.candidates)) return (((x.candidates[0] || {}).content || {}).parts || []).map(p => p.text || '').join('');\n  if (typeof x.text === 'string') return x.text;\n  return JSON.stringify(x);\n};\nlet raw = textOf(j).replace(/```(?:json)?/gi, '');\nlet data = {};\ntry { const a = raw.indexOf('{'), b = raw.lastIndexOf('}'); data = JSON.parse(raw.slice(a, b + 1)); } catch (e) { data = {}; }\nconst leads = Array.isArray(data.leads) ? data.leads : [];\nconst summary = typeof data.summary === 'string' ? data.summary.slice(0, 400) : '';\nconst inp = $('Called by DD Main').first().json;\nconst now = new Date().toISOString();\nconst seen = new Set();\nconst cleanPhone = p => { if (!p) return ''; const first = String(p).split(/[;,\\/]| or /)[0]; const d = first.replace(/[^0-9+]/g, ''); return d.length >= 8 ? d : ''; };\nconst cleanEmail = e => { const s = e ? String(e).split(/[;,\\s]/)[0].trim() : ''; return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(s) ? s.toLowerCase() : ''; };\nconst out = [];\nfor (const l of leads) {\n  const name = String(l.business_name || '').trim();\n  if (!name || !l.source_url) continue;\n  const key = name.toLowerCase();\n  if (seen.has(key)) continue; seen.add(key);\n  out.push({ json: {\n    lead_id: Math.random().toString(36).slice(2, 10), found_at: now, search: String(inp.query || ''), kind: String(inp.mode || 'custom'), for_chat: String(inp.chat_id || ''),\n    business_name: name, business_type: String(l.business_type || ''), area: String(l.area || ''), phone: cleanPhone(l.phone), email: cleanEmail(l.email),\n    website: String(l.website || ''), source_url: String(l.source_url), online_presence: String(l.online_presence || ''),\n    fit_score: Math.max(0, Math.min(10, Number(l.fit_score) || 0)), why: String(l.why || ''), opener_bn: String(l.opener || l.opener_bn || ''),\n    status: 'new', do_not_contact: false, summary,\n  } });\n}\nout.sort((a, b) => b.json.fit_score - a.json.fit_score);\nreturn out.slice(0, 10);\n"
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "06d8aba3-e16d-432c-90cf-976572252b01",
+      "name": "Build lead summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const esc = s => String(s ?? '').replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst all = $('Clean leads').all().map(i => i.json).filter(l => l.lead_id);\nconst inp = $('Called by DD Main').first().json;\nconst plan = (() => { try { return $('Search plan').first().json; } catch (e) { return {}; } })();\nconst area = plan.area || inp.area || 'your area';\nconst mode = inp.mode || 'custom';\nconst title = { customers: '🎯 Customer leads', competitors: '🔍 Competitor research', custom: '🔎 Leads' }[mode] || '🔎 Leads';\nif (!all.length) {\n  const what = mode === 'customers' ? 'matching organisations' : `${esc(plan.type || inp.shop_type || 'similar')} businesses`;\n  return [{ json: { text: `${title}: OpenStreetMap has no ${what} mapped near ${esc(area)} yet, so I didn't list any (I never make up businesses).\\n\\nTry 🎯 Customers, or a wider area, e.g. /leads ${esc(plan.type || inp.shop_type || 'shop')} in Kolkata` } }];\n}\nconst summary = all[0].summary ? `<i>${esc(all[0].summary)}</i>\\n\\n` : '';\nconst lines = all.slice(0, 8).map((l, i) => {\n  const contact = [l.phone ? '📞 ' + esc(l.phone) : '', l.email ? '✉️ ' + esc(l.email) : '', l.website ? '🌐 ' + esc(l.website) : ''].filter(Boolean).join(' · ') || 'no contact published';\n  return `${i + 1}. <b>${esc(l.business_name)}</b>${l.area ? ' · ' + esc(l.area) : ''}\\n   ${contact}\\n   ${esc(l.why)} <a href=\"${esc(l.source_url)}\">source</a>`;\n});\nconst foot = mode === 'customers' ? 'Opening messages for each are saved in dd_leads. Contact them one by one; please don\\'t bulk-message.' : mode === 'competitors' ? 'Source: OpenStreetMap listings. Saved to dd_leads.' : 'Saved to dd_leads with an opener for each.';\nlet text = `${title} · ${esc(area)}\\n\\n${summary}${lines.join('\\n\\n')}\\n\\n${foot}`;\nif (text.length > 4000) text = text.slice(0, 3990) + '…';\nreturn [{ json: { text } }];\n"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "f11a67a5-60ad-42cd-9e8f-a9103cb9a2ee",
+      "name": "Send leads",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Called by DD Main').first().json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "webhookId": "b891c2e9-e732-48d8-8d46-484b6ce48af5",
+      "credentials": {
+        "telegramApi": {
+          "id": "5xia5qQXiK72v5zX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "id": "fb2479fb-ca29-42e1-8818-2f67e2a1064d",
+      "name": "Lead rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        200
+      ],
+      "parameters": {
+        "jsCode": "return $('Clean leads').all().filter(i => i.json.lead_id).map(i => { const { summary, ...row } = i.json; return { json: row }; });"
+      }
+    },
+    {
+      "id": "9ea58dcf-ad9b-4150-8d5a-5ac56b74fad9",
+      "name": "Save leads",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        200
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "NIZvSdHKD58hzrZS",
+          "cachedResultName": "dd_leads"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "923fe313-1102-4b8c-9c7c-679fac147271",
+      "name": "Lead Finder",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        300,
+        200
+      ],
+      "parameters": {
+        "builtInTools": {},
+        "jsonOutput": true,
+        "messages": {
+          "values": [
+            {
+              "content": "=MODE: {{ $('Called by DD Main').first().json.mode || 'custom' }}\nShop: {{ $('Called by DD Main').first().json.shop_name || 'unknown' }} ({{ $('Called by DD Main').first().json.shop_type || 'local shop' }}), area: {{ $('Called by DD Main').first().json.area || 'Hooghly, West Bengal' }}\nLanguage for openers: {{ $('Called by DD Main').first().json.lang || 'bn' }} (bn = Bengali, en = English, mixed = Bengali with a few English words)\nRequest: {{ $('Called by DD Main').first().json.query }}\n\nOPENSTREETMAP LISTINGS NEAR {{ $('Search plan').first().json.area }} ({{ $json.count }}):\n{{ $json.results_text }}\n\nReturn only the JSON.",
+              "role": "user"
+            }
+          ]
+        },
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "models/gemini-flash-lite-latest"
+        },
+        "operation": "message",
+        "options": {
+          "includeMergedResponse": true,
+          "maxOutputTokens": 12000,
+          "systemMessage": "You are the Lead Finder for Dukaan Digital, an AI growth partner for small local businesses in India. You get real business listings from OpenStreetMap near the shop (name, type, phone, email, website, address, listing URL) and must pick leads ONLY from them. The request gives a MODE:\n\nMODE customers: organisations that could BUY from this shop regularly or in bulk (schools, colleges, offices, clinics, hotels, cafes, caterers, event planners). Choose the ones that genuinely fit the shop's business type. 'why' = one line on why they would buy from this shop. 'opener' = a short, polite 2-line message the shop owner could send or say, in the given language, mentioning the organisation by name.\n\nMODE competitors: businesses of the same type nearby. 'why' = one line: what they likely offer or their visible strength (e.g. has a website, listed phone), then one gap this shop can use (e.g. 'no website or social page listed'). 'opener' = null. Fill 'summary' with 2-3 short takeaways on how this shop can stand out, based only on these listings.\n\nMODE custom: small local businesses matching the request that would benefit from help with their social media posts. 'opener' = a polite 2-line Bengali opening line for a visit or call.\n\nRules (strict):\n- Use ONLY businesses from the listings. Never invent a business, phone number, email or URL.\n- phone, email and website: copy exactly from the listing, or null if it shows '-'.\n- source_url: the listing URL of that business.\n- online_presence: 'website' if a website is listed, 'social page' if it is a Facebook/Instagram link, otherwise 'listing only'.\n- fit_score 1-10. Return at most 8 leads, best first (prefer ones with a phone or email). Keep text short.\n- If the listings are empty, return {\"summary\": null, \"leads\": []}.\n\nReturn ONLY valid JSON:\n{\"summary\": \"2-3 short lines or null\", \"leads\": [{\"business_name\": \"\", \"business_type\": \"\", \"area\": \"\", \"phone\": null, \"email\": null, \"website\": null, \"source_url\": \"\", \"online_presence\": \"\", \"fit_score\": 0, \"why\": \"one line\", \"opener\": \"short text or null\"}]}",
+          "temperature": 0.2
+        },
+        "resource": "text",
+        "simplify": true
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "MIYQ93o8cSCVrQTJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "id": "565ac3ae-b033-466f-93ca-4e29c3911e9e",
+      "name": "Search results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        420
+      ],
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst rows = [];\nfor (const it of $input.all()) {\n  const r = it.json || {};\n  if (!r.osm_id || r.error) continue;\n  const name = (r.namedetails && r.namedetails.name) || r.name || String(r.display_name || '').split(',')[0];\n  if (!name) continue;\n  const key = r.osm_type + r.osm_id;\n  if (seen.has(key)) continue; seen.add(key);\n  const t = r.extratags || {};\n  const phone = t.phone || t['contact:phone'] || t['contact:mobile'] || '';\n  const email = t.email || t['contact:email'] || '';\n  const web = t.website || t['contact:website'] || t['contact:facebook'] || '';\n  rows.push({ name, kind: r.type || r.class || '', phone, email, web, addr: String(r.display_name || '').split(',').slice(1, 4).join(',').trim(), url: `https://www.openstreetmap.org/${r.osm_type}/${r.osm_id}`, score: (phone ? 2 : 0) + (email ? 2 : 0) + (web ? 1 : 0) });\n}\nrows.sort((a, b) => b.score - a.score);\nconst top = rows.slice(0, 40);\nreturn [{ json: { count: top.length, results_text: top.map((r, i) => `${i + 1}. ${r.name} | type: ${r.kind} | phone: ${r.phone || '-'} | email: ${r.email || '-'} | website: ${r.web || '-'} | address: ${r.addr || '-'} | listing: ${r.url}`).join('\\n') || '(no results)' } }];\n"
+      }
+    },
+    {
+      "id": "c514cb89-845d-4e62-9929-4fd60cdb02cc",
+      "name": "Search plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        420
+      ],
+      "parameters": {
+        "jsCode": "const i = $input.first().json;\nconst mode = i.mode || 'custom';\nlet type = String(i.shop_type || 'shop').trim();\nlet area = i.area || 'Hooghly, West Bengal';\n// OpenStreetMap place search understands its own category phrases, so map common business types to them.\nconst OSM = [[/sport/i, ['sports shop']], [/bottle|gift|sticker/i, ['gift shop', 'variety store']], [/mobile|phone/i, ['mobile phone shop', 'electronics shop']], [/saree|sari|cloth|garment|boutique|fashion/i, ['clothes shop', 'boutique']], [/sweet|mishti|mithai|confection/i, ['sweet shop', 'confectionery shop', 'pastry shop']], [/station|book|pen|xerox/i, ['stationery shop', 'book shop']], [/bak|cake/i, ['bakery', 'pastry shop']], [/electronic|gadget|computer/i, ['electronics shop', 'computer shop']], [/grocer|kirana|super|general/i, ['supermarket', 'convenience store']], [/jewel|gold/i, ['jewelry shop', 'jewellery shop']], [/salon|parlou?r|beauty|hair/i, ['hairdresser', 'beauty shop']], [/gym|fitness|supplement/i, ['fitness centre', 'gym']], [/cafe|coffee/i, ['cafe']], [/restaurant|food|caterer/i, ['restaurant']], [/pharma|medic|chemist/i, ['pharmacy']], [/shoe|footwear/i, ['shoe shop']]];\nconst words = t => { const hit = OSM.find(([re]) => re.test(t)); return hit ? hit[1] : [t.replace(/s$/i, '') + ' shop']; };\nlet qs;\nif (mode === 'custom') {\n  const q = String(i.query || '');\n  const m = q.match(/^(.*?)\\s+(?:in|near|at|around)\\s+(.+)$/i);\n  if (m) { type = m[1]; area = m[2]; } else type = q;\n  const w = words(type);\n  qs = [...w.map(x => `${x} in ${area}`), `${w[0]} near ${area}`];\n} else if (mode === 'customers') {\n  qs = [`school in ${area}`, `college in ${area}`, `hospital in ${area}`, `hotel in ${area}`, `office in ${area}`];\n} else {\n  const w = words(type);\n  qs = [...w.map(x => `${x} in ${area}`), `${w[0]} near ${area}`, `${w[0]} in Hooghly`, `${w[0]} in Chandannagar`];\n}\nreturn qs.map(q => ({ json: { q, mode, area, type } }));\n"
+      }
+    },
+    {
+      "id": "3dc7eee6-f91d-4b51-a1eb-10b17cfa5a18",
+      "name": "Find places",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        420
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "DukaanDigital/1.0 (hackathon demo bot)"
+            }
+          ]
+        },
+        "method": "GET",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchInterval": 1100,
+              "batchSize": 1
+            }
+          },
+          "timeout": 20000
+        },
+        "sendHeaders": true,
+        "url": "=https://nominatim.openstreetmap.org/search?q={{ encodeURIComponent($json.q + ', India') }}&format=json&limit=20&extratags=1&namedetails=1&countrycodes=in"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Clean leads": {
+      "main": [
+        [
+          {
+            "node": "Build lead summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build lead summary": {
+      "main": [
+        [
+          {
+            "node": "Send leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send leads": {
+      "main": [
+        [
+          {
+            "node": "Lead rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead rows": {
+      "main": [
+        [
+          {
+            "node": "Save leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Finder": {
+      "main": [
+        [
+          {
+            "node": "Clean leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search results": {
+      "main": [
+        [
+          {
+            "node": "Lead Finder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Called by DD Main": {
+      "main": [
+        [
+          {
+            "node": "Search plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search plan": {
+      "main": [
+        [
+          {
+            "node": "Find places",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find places": {
+      "main": [
+        [
+          {
+            "node": "Search results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

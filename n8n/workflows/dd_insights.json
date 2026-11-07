@@ -1,0 +1,736 @@
+{
+  "name": "DD Insights (Analyst + festival nudge)",
+  "nodes": [
+    {
+      "id": "f97f2f82-a4b1-42af-b076-b4ddcd76f078",
+      "name": "Every morning 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "26b12fbd-25a7-4c46-8324-42534030c608",
+      "name": "Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        100
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: { for_chat: String($input.first().json.chat_id || ''), mode: $input.first().json.mode || 'nudge' } }];"
+      }
+    },
+    {
+      "id": "7a8b1358-9ed7-4110-b116-ffd542f91078",
+      "name": "Called by DD Main",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        220
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chat_id",
+              "type": "string"
+            },
+            {
+              "name": "mode",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7f1ac923-a4e0-4e1b-9efe-56bb390d4237",
+      "name": "Get shops",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        100
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "kwBjQGSQIkZnZzVL",
+          "cachedResultName": "dd_shops"
+        },
+        "matchType": "allConditions",
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "8a70d672-5e88-4133-bc81-b8536293132c",
+      "name": "Get recent posts",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        100
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "ybF49bnGulHU76LZ",
+          "cachedResultName": "dd_posts"
+        },
+        "matchType": "allConditions",
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "fac6731a-2775-4e41-93ae-4ad930d47c4c",
+      "name": "Nudge or report",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        900,
+        100
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "nudge",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Start').first().json.mode }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "nudge"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "report",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Start').first().json.mode }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "report"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      }
+    },
+    {
+      "id": "96dce080-2b73-48ad-b03e-59ee151fdc61",
+      "name": "Nudge check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const WINDOW_DAYS = 3;  // nudge when a festival is 0-3 days away\nconst forChat = (() => { try { return String($('Start').first().json.for_chat || ''); } catch (e) { return ''; } })();\nconst FORCE = !!forChat; // demo command: only this shop, even if it already posted for the festival\n\nconst FESTIVALS = [\n  ['2026-11-08', 'Kali Puja / Diwali', 'কালীপুজো / দীপাবলি', 'sweets, diyas, lights, gift boxes'],\n  ['2026-11-11', 'Bhai Phonta', 'ভাইফোঁটা', 'sweets, gift boxes, phonta thali, sarees, shirts'],\n  ['2026-11-14', \"Children's Day\", 'শিশু দিবস', 'chocolates, cakes, toys, stationery'],\n  ['2026-11-15', 'Chhath Puja', 'ছট পুজো', 'thekua, fruits, sugarcane, puja items'],\n  ['2026-11-18', 'Jagaddhatri Puja', 'জগদ্ধাত্রী পুজো', 'sweets, new clothes, lights'],\n  ['2026-11-24', 'Guru Nanak Jayanti', 'গুরু নানক জয়ন্তী', 'sweets'],\n  ['2026-12-25', 'Christmas', 'বড়দিন', 'cakes, plum cake, gifts, decorations'],\n  ['2027-01-01', 'New Year', 'ইংরেজি নববর্ষ', 'cakes, gifts, party orders'],\n  ['2027-01-26', 'Republic Day', 'প্রজাতন্ত্র দিবস', 'tricolour sweets, school supplies'],\n  ['2027-02-14', \"Valentine's Day\", 'ভ্যালেন্টাইনস ডে', 'cakes, chocolates, flowers, gifts'],\n];\n\nconst todayIST = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);\nconst t0 = Date.parse(todayIST);\nconst upcoming = FESTIVALS\n  .map(([date, en, bn, products]) => ({ date, en, bn, products, in_days: Math.round((Date.parse(date) - t0) / 86400000) }))\n  .filter(f => f.in_days >= 0 && f.in_days <= 30);\nconst inWindow = upcoming.filter(f => f.in_days <= WINDOW_DAYS);\nconst sameFest = (a, b) => {\n  const parts = s => String(s || '').toLowerCase().split('/').map(x => x.trim()).filter(Boolean);\n  return parts(a).some(x => parts(b).some(y => x.includes(y) || y.includes(x)));\n};\n\nconst shops = $('Get shops').all().map(i => i.json).filter(s => s.chat_id && s.chat_id !== 'PENDING');\nconst posts = $('Get recent posts').all().map(i => i.json).filter(p => p.post_id);\n\nconst out = [];\nfor (const shop of shops) {\n  if (FORCE && String(shop.chat_id) !== forChat) continue;\n  const mine = posts.filter(p => String(p.chat_id) === String(shop.chat_id));\n  const alreadyPosted = f => mine.some(p => p.status === 'posted' && sameFest(p.festival, f.en));\n  const fest = FORCE ? (inWindow[0] || upcoming[0]) : inWindow.find(f => !alreadyPosted(f));\n  if (!fest) continue;\n  out.push({ json: { chat_id: shop.chat_id, shop, festival: fest, recent_products: mine.slice(-5).map(p => p.product).filter(Boolean) } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "id": "ab6f8719-6e9e-4da9-84e0-66a54684241d",
+      "name": "Build Nudge request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const MAX_TOKENS = 500;\nconst lang = ($json.shop.languages === 'bn' || $json.shop.languages === 'en') ? $json.shop.languages : 'mixed';\nconst LANG_RULE = { bn: 'Write in natural West Bengal Bengali only.', en: 'Write in simple, friendly Indian English only.', mixed: 'Write in Bengali, with one short English line at the end.' }[lang];\nconst SYSTEM = `You write a short, friendly Telegram nudge from a small business's marketing assistant (Dukaan Digital) to the owner. ${LANG_RULE}\n- Mention the festival and its date (as given), and how many days are left.\n- Suggest ONE specific product or service idea that fits both the festival and this business type (use the festival's typical products and the shop's recent products). If the festival does not fit this business at all, suggest a simple greeting post instead.\n- Ask the owner to send a photo (and a voice note with the price).\n- Max 4 lines, max 2 emojis. No invented offers or prices.\n\nReturn ONLY valid JSON:\n{ \"message\": \"the Telegram text\" }`;\nconst facts = {\n  shop: { name_bn: $json.shop.shop_name_bn, name_en: $json.shop.shop_name_en, type: $json.shop.shop_type },\n  festival: $json.festival,\n  recent_products: $json.recent_products,\n};\nconst user = JSON.stringify(facts, null, 2) + '\\nReturn the JSON now.';\nreturn { json: { agent: 'nudge', chat_id: $json.chat_id, system: SYSTEM, user, max_tokens: MAX_TOKENS } };\n",
+        "mode": "runOnceForEachItem"
+      }
+    },
+    {
+      "id": "7fc9a9cb-5553-4535-b856-ea6de3bf7572",
+      "name": "Parse Nudge JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const REQUIRED = ['message'];\nfunction rawText(j) {\n  if (typeof j.merged_response === 'string') return j.merged_response;\n  if (typeof j.content === 'string') return j.content;\n  if (j.message && typeof j.message.content === 'string') return j.message.content;\n  if (Array.isArray(j.content)) return j.content.map(c => c.text || '').join('');\n  if (j.content && Array.isArray(j.content.parts)) return j.content.parts.map(p => p.text || '').join('');\n  if (Array.isArray(j.candidates)) return (((j.candidates[0] || {}).content || {}).parts || []).map(p => p.text || '').join('');\n  if (typeof j.output === 'string') return j.output;\n  if (typeof j.text === 'string') return j.text;\n  return JSON.stringify(j);\n}\nfunction extract(s) { s = s.replace(/```(?:json)?/gi, '').trim(); const a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a === -1 || b <= a) throw new Error('no JSON object found'); return JSON.parse(s.slice(a, b + 1)); }\nreturn $input.all().map((item, i) => {\n  const raw = rawText(item.json || {});\n  try { const data = extract(raw); const missing = REQUIRED.filter(k => !(k in data));\n    if (missing.length) return { json: { ok: false, error: 'missing keys: ' + missing.join(', '), raw: raw.slice(0, 500) }, pairedItem: i };\n    return { json: { ok: true, ...data }, pairedItem: i };\n  } catch (e) { return { json: { ok: false, error: String(e.message || e), raw: raw.slice(0, 500) }, pairedItem: i }; }\n});\n"
+      }
+    },
+    {
+      "id": "1b048432-4593-419a-a617-e0060efa8482",
+      "name": "Nudge OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "095a7812-1ecd-49e7-8c47-c0f894093df9",
+      "name": "Send nudge",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2220,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Nudge check').item.json.chat_id }}",
+        "text": "={{ String($json.message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "webhookId": "62f1f857-fe3b-4338-b808-5f04811a7907",
+      "credentials": {
+        "telegramApi": {
+          "id": "5xia5qQXiK72v5zX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "id": "d0169d84-f02a-4d0c-bfd2-244973a9f89a",
+      "name": "Analyst stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const forChat = (() => { try { return String($('Start').first().json.for_chat || ''); } catch (e) { return ''; } })();\nconst rows = $input.all().map(i => i.json).filter(r => r && r.post_id && r.status === 'posted' && (!forChat || String(r.chat_id) === forChat));\nconst num = v => Number(v) || 0;\nconst eng = r => num(r.reactions) + 2 * num(r.comments) + 3 * num(r.shares);\nconst avg = a => (a.length ? Math.round(a.reduce((s, r) => s + eng(r), 0) / a.length) : null);\n\nfunction groupBy(key) {\n  const g = {};\n  for (const r of rows) { const k = r[key] || 'none'; (g[k] = g[k] || []).push(r); }\n  return Object.fromEntries(Object.entries(g).map(([k, a]) => [k, { posts: a.length, avg_engagement: avg(a) }]));\n}\n\nconst festival = rows.filter(r => r.angle === 'festival');\nconst nonFestival = rows.filter(r => r.angle !== 'festival');\nconst withPrice = rows.filter(r => r.has_price_on_poster === 'yes');\nconst noPrice = rows.filter(r => r.has_price_on_poster !== 'yes');\nconst ratio = (a, b) => (a && b ? Math.round((a / b) * 10) / 10 : null);\nconst best = [...rows].sort((a, b) => eng(b) - eng(a))[0] || null;\n\nconst stats = {\n  posts_analysed: rows.length,\n  seeded_demo_posts: rows.filter(r => r.source === 'seeded_demo').length,\n  live_posts: rows.filter(r => r.source !== 'seeded_demo').length,\n  avg_engagement_all: avg(rows),\n  by_angle: groupBy('angle'),\n  festival_vs_other: { festival: avg(festival), other: avg(nonFestival), ratio: ratio(avg(festival), avg(nonFestival)) },\n  price_on_poster: { with_price: avg(withPrice), without_price: avg(noPrice), ratio: ratio(avg(withPrice), avg(noPrice)) },\n  best_post: best ? { product: best.product, angle: best.angle, festival: best.festival || null, engagement: eng(best), date: String(best.created_at).slice(0, 10) } : null,\n  engagement_formula: 'reactions + 2*comments + 3*shares',\n};\n\nreturn [{ json: { stats } }];\n"
+      }
+    },
+    {
+      "id": "12b793e0-b9e3-4b8d-a85e-20f8fe990343",
+      "name": "Build Analyst request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const MAX_TOKENS = 1200;\nconst forChat = String($('Start').first().json.for_chat || '');\nconst shop = $('Get shops').all().map(i => i.json).find(s => String(s.chat_id) === forChat) || {};\nconst lang = (shop.languages === 'bn' || shop.languages === 'en') ? shop.languages : 'mixed';\nconst LANG_RULE = { bn: 'Write it in simple Bengali only.', en: 'Write it in simple English only.', mixed: 'Bengali first, simple words, then a 1-2 line English summary.' }[lang];\nconst SYSTEM = `You are the Analyst for a small business's marketing assistant (Dukaan Digital). You get pre-computed statistics about the business's recent posts and the list of upcoming festivals.\n\nWrite a short weekly report for the owner:\n- ${LANG_RULE}\n- 3 findings max, each tied to a number from the stats (quote the number exactly as given; never compute new numbers).\n- 1 concrete next action, tied to a real upcoming festival from the list (with its date) and a product or service that fits this business type.\n- If the stats include seeded demo data, do not hide it; add \"(demo data)\" after any finding based on it.\n- Telegram message limit: under 900 characters total.\n\nAlso produce an \"insights\" line to save into memory for the Strategist (max 250 characters, English, e.g. \"Festival posts with price on poster get ~3x reactions; plain restock posts do poorly\").\n\nReturn ONLY valid JSON:\n{\n  \"report_text\": \"the Telegram message for the owner\",\n  \"insights\": \"max 250 chars, for memory\",\n  \"next_festival\": \"name and date, or null\"\n}`;\nconst stats = $('Analyst stats').first().json.stats;\nconst t0 = Date.parse(new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10));\nconst FEST = [['2026-11-08','Kali Puja / Diwali'],['2026-11-11','Bhai Phonta'],['2026-11-14',\"Children's Day\"],['2026-11-15','Chhath Puja'],\n  ['2026-11-18','Jagaddhatri Puja'],['2026-11-24','Guru Nanak Jayanti'],['2026-12-25','Christmas'],['2027-01-01','New Year'],['2027-01-26','Republic Day'],['2027-02-14',\"Valentine's Day\"]];\nconst upcoming = FEST.map(([date, name]) => ({ date, name, in_days: Math.round((Date.parse(date) - t0) / 864e5) })).filter(f => f.in_days >= 0 && f.in_days <= 14);\nconst facts = { shop: { name_bn: shop.shop_name_bn, name_en: shop.shop_name_en, type: shop.shop_type }, stats, upcoming_festivals: upcoming };\nconst user = JSON.stringify(facts, null, 2) + '\\nReturn the JSON now.';\nreturn [{ json: { agent: 'analyst', system: SYSTEM, user, max_tokens: MAX_TOKENS } }];\n"
+      }
+    },
+    {
+      "id": "125d5043-8acb-401f-b24e-32186146310a",
+      "name": "Parse Analyst JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const REQUIRED = ['report_text', 'insights'];\nfunction rawText(j) {\n  if (typeof j.merged_response === 'string') return j.merged_response;\n  if (typeof j.content === 'string') return j.content;\n  if (j.message && typeof j.message.content === 'string') return j.message.content;\n  if (Array.isArray(j.content)) return j.content.map(c => c.text || '').join('');\n  if (j.content && Array.isArray(j.content.parts)) return j.content.parts.map(p => p.text || '').join('');\n  if (Array.isArray(j.candidates)) return (((j.candidates[0] || {}).content || {}).parts || []).map(p => p.text || '').join('');\n  if (typeof j.output === 'string') return j.output;\n  if (typeof j.text === 'string') return j.text;\n  return JSON.stringify(j);\n}\nfunction extract(s) { s = s.replace(/```(?:json)?/gi, '').trim(); const a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a === -1 || b <= a) throw new Error('no JSON object found'); return JSON.parse(s.slice(a, b + 1)); }\nreturn $input.all().map((item, i) => {\n  const raw = rawText(item.json || {});\n  try { const data = extract(raw); const missing = REQUIRED.filter(k => !(k in data));\n    if (missing.length) return { json: { ok: false, error: 'missing keys: ' + missing.join(', '), raw: raw.slice(0, 500) }, pairedItem: i };\n    return { json: { ok: true, ...data }, pairedItem: i };\n  } catch (e) { return { json: { ok: false, error: String(e.message || e), raw: raw.slice(0, 500) }, pairedItem: i }; }\n});\n"
+      }
+    },
+    {
+      "id": "2d3b8828-1797-44cb-8cc0-b5b093b68bd1",
+      "name": "Report OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "027ddae6-f5b2-4c17-94fa-47454769e80b",
+      "name": "Save insights",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2220,
+        160
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "kwBjQGSQIkZnZzVL",
+          "cachedResultName": "dd_shops"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Start').first().json.for_chat }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "insights": "={{ $('Parse Analyst JSON').first().json.insights }}"
+          },
+          "schema": [
+            {
+              "id": "insights",
+              "displayName": "insights",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "b9b94521-7459-4653-908b-1bc41744829d",
+      "name": "Send report",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2440,
+        160
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Start').first().json.for_chat }}",
+        "text": "={{ String($('Parse Analyst JSON').first().json.report_text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "webhookId": "75456421-bbcb-4621-a9d0-9b4fdb8cedfe",
+      "credentials": {
+        "telegramApi": {
+          "id": "5xia5qQXiK72v5zX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "id": "6449829f-a511-41ec-a557-30088a8ae488",
+      "name": "Send report failed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2220,
+        300
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Start').first().json.for_chat }}",
+        "text": "Report failed, please send /report again.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "webhookId": "9fd49b5a-4484-4eb2-9bad-f5c2f0cb9e8d",
+      "credentials": {
+        "telegramApi": {
+          "id": "5xia5qQXiK72v5zX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "id": "406e34d9-82a8-419d-ae91-6caa2ea34475",
+      "name": "Nudge writer",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        0
+      ],
+      "parameters": {
+        "builtInTools": {},
+        "jsonOutput": true,
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.user }}",
+              "role": "user"
+            }
+          ]
+        },
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "models/gemini-3.1-flash-lite"
+        },
+        "operation": "message",
+        "options": {
+          "includeMergedResponse": true,
+          "maxOutputTokens": 4000,
+          "systemMessage": "={{ $json.system }}"
+        },
+        "resource": "text",
+        "simplify": true
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "MIYQ93o8cSCVrQTJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "id": "8e0d7177-ad6a-4075-a04d-ff6374047b93",
+      "name": "Analyst",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        220
+      ],
+      "parameters": {
+        "builtInTools": {},
+        "jsonOutput": true,
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.user }}",
+              "role": "user"
+            }
+          ]
+        },
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "models/gemini-3.5-flash-lite"
+        },
+        "operation": "message",
+        "options": {
+          "includeMergedResponse": true,
+          "maxOutputTokens": 8000,
+          "systemMessage": "={{ $json.system }}"
+        },
+        "resource": "text",
+        "simplify": true
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "MIYQ93o8cSCVrQTJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every morning 9:00": {
+      "main": [
+        [
+          {
+            "node": "Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Get shops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Called by DD Main": {
+      "main": [
+        [
+          {
+            "node": "Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get shops": {
+      "main": [
+        [
+          {
+            "node": "Get recent posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get recent posts": {
+      "main": [
+        [
+          {
+            "node": "Nudge or report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nudge or report": {
+      "main": [
+        [
+          {
+            "node": "Nudge check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyst stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nudge check": {
+      "main": [
+        [
+          {
+            "node": "Build Nudge request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Nudge JSON": {
+      "main": [
+        [
+          {
+            "node": "Nudge OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nudge OK?": {
+      "main": [
+        [
+          {
+            "node": "Send nudge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyst stats": {
+      "main": [
+        [
+          {
+            "node": "Build Analyst request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Analyst JSON": {
+      "main": [
+        [
+          {
+            "node": "Report OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report OK?": {
+      "main": [
+        [
+          {
+            "node": "Save insights",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send report failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save insights": {
+      "main": [
+        [
+          {
+            "node": "Send report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Nudge request": {
+      "main": [
+        [
+          {
+            "node": "Nudge writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nudge writer": {
+      "main": [
+        [
+          {
+            "node": "Parse Nudge JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Analyst request": {
+      "main": [
+        [
+          {
+            "node": "Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyst": {
+      "main": [
+        [
+          {
+            "node": "Parse Analyst JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
