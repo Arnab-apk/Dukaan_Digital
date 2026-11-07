@@ -60,6 +60,7 @@ async function run(name, nodes, input = [], extra = {}) {
   const copy = { ok: true, headline_bn: 'ভাইফোঁটার মিষ্টিমুখ', subline_bn: 'টাটকা কাজু বরফি, আজই অর্ডার দিন', price_text: '₹400/কেজি', badge_bn: 'ভাইফোঁটা স্পেশাল', caption_bn: 'ভাইয়ের পাতে থাকুক সেরা মিষ্টি।\nনতুন কাজু বরফি এসে গেছে।', caption_en: 'Fresh kaju barfi for Bhai Phonta, ₹400/kg.', hashtags: ['#BhaiPhonta', '#Hooghly'], whatsapp_text: 'ভাইফোঁটার জন্য কাজু বরফি ₹400/কেজি। অর্ডার: 98300 00000' };
   const nodes = { 'Decide next step': [{ json: { ...d1[0].json, shop } }], 'Parse Copywriter JSON': [{ json: copy }], 'Parse Strategist JSON': [{ json: strat }], 'Photo to base64': p4, 'Parse Listener JSON': [{ json: { product_en: 'Kaju barfi', price: '₹400/kg' } }] };
   const p8 = await run('08_build_poster.js', nodes);
+  fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'poster_test.html'), '<!doctype html><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet"><body style="margin:0">' + p8[0].json.hcti.html);
   log('poster html kb', p8[0].json.html_kb);
   const unfilled = p8[0].json.hcti.html.match(/\{\{\w+\}\}/g); log('unfilled placeholders', unfilled || 'none');
